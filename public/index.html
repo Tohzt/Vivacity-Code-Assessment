@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Code Assessment</title>
+    </head>
+    <body>
+        <h1>Full Stack Developer Application Exercise</h1>
+        <button id="getUserInfo">Get User Info</button>
+        <div id="response"></div>
+
+        <button id="createNewUser"> Create New User </button>
+
+        <script>
+            const getUserInfoButton = document.getElementById('getUserInfo');
+            const createNewUserButton = document.getElementById('createNewUser');
+            const responseDiv = document.getElementById('response');
+
+            getUserInfoButton.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/awesome/application');
+                    const data = await response.json();
+                    responseDiv.innerHTML = '';
+
+                    data.forEach(user => {
+                        const userDiv = document.createElement('div');
+                        userDiv.innerHTML = `
+                            <h2>User Information</h2>
+                            <p><strong>Name:</strong> <span id="username-${user.id}">${user.username}</span></p>
+                            <p><strong>Birthday:</strong> <span id="birthdate-${user.id}">${user.birthdate}</span></p>
+                            <p><strong>Email:</strong> <span id="email-${user.id}">${user.email}</span></p>
+                            <button class="editButton" data-id="${user.id}">Edit</button>
+                            <button class="saveButton hidden" data-id="${user.id}">Save</button>
+                            <button class="cancelButton hidden" data-id="${user.id}">Cancel</button>
+                            <button class="deleteButton" data-id="${user.id}">Delete</button>
+                            `;
+                        responseDiv.appendChild(userDiv);
+                    });
+
+                    // Attach click event handlers to edit and delete buttons
+                    const editButtons = document.querySelectorAll('.editButton');
+                    const deleteButtons = document.querySelectorAll('.deleteButton');
+                    editButtons.forEach(button => {
+                        button.addEventListener('click', handleEdit);
+                    });
+                    deleteButtons.forEach(button => {
+                        button.addEventListener('click', handleDelete);
+                    });
+                } catch (error) {
+                    responseDiv.innerText = 'Error getting application info.';
+                }
+            });
+
+            // Event handler for edit button
+            function handleEdit(event) {
+                const userId = event.target.getAttribute('data-id');
+                const usernameSpan = document.getElementById(`username-${userId}`);
+                const birthdateSpan = document.getElementById(`birthdate-${userId}`);
+                const emailSpan = document.getElementById(`email-${userId}`);
+                const editButton = event.target;
+                const saveButton = document.querySelector(`.saveButton[data-id="${userId}"]`);
+                const cancelButton = document.querySelector(`.cancelButton[data-id="${userId}"]`);
+
+                // Store the original values for reverting
+                const originalUsername = usernameSpan.textContent;
+                const originalBirthdate = birthdateSpan.textContent;
+                const originalEmail = emailSpan.textContent;
+
+                // Convert spans to input fields for editing
+                usernameSpan.innerHTML = `<input type="text" value="${originalUsername}" id="edit-username-${userId}">`;
+
+                // Format original birthdate value to "yyyy-MM-dd" format
+                const originalBirthdateValue = new Date(originalBirthdate).toISOString().split('T')[0];
+                birthdateSpan.innerHTML = `<input type="date" value="${originalBirthdateValue}" id="edit-birthdate-${userId}">`;
+                emailSpan.innerHTML = `<input type="email" value="${originalEmail}" id="edit-email-${userId}">`;
+
+                saveButton.addEventListener('click', () => handleSave(userId));
+                cancelButton.addEventListener('click', () => handleCancel(userId, originalUsername, originalBirthdate, originalEmail));
+            }
+
+            // Event handler for cancel button
+            function handleCancel(userId, originalUsername, originalBirthdate, originalEmail) {
+                const usernameSpan = document.getElementById(`username-${userId}`);
+                const birthdateSpan = document.getElementById(`birthdate-${userId}`);
+                const emailSpan = document.getElementById(`email-${userId}`);
+                const editButton = document.querySelector(`.editButton[data-id="${userId}"]`);
+                const saveButton = document.querySelector(`.saveButton[data-id="${userId}"]`);
+                const cancelButton = document.querySelector(`.cancelButton[data-id="${userId}"]`);
+
+                // Revert input fields to original values
+                usernameSpan.innerHTML = originalUsername;
+                birthdateSpan.innerHTML = originalBirthdate;
+                emailSpan.innerHTML = originalEmail;
+            }
+
+            // Event handler for save button
+            async function handleSave(userId) {
+                const usernameInput = document.getElementById(`edit-username-${userId}`);
+                const birthdateInput = document.getElementById(`edit-birthdate-${userId}`);
+                const emailInput = document.getElementById(`edit-email-${userId}`);
+
+                const updatedUser = {
+                    username: usernameInput.value,
+                    birthdate: birthdateInput.value,
+                    email: emailInput.value
+                };
+
+                try {
+                    const response = await fetch(`/awesome/application/${userId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updatedUser)
+                    });
+                    if (response.status === 200) {
+                        // Refresh the list after successful update
+                        getUserInfoButton.click();
+                    }
+                } catch (error) {
+                    console.error('Error updating user:', error);
+                }
+            }
+
+            // Event handler for delete button
+            async function handleDelete(event) {
+                const userId = event.target.getAttribute('data-id');
+                try {
+                    const response = await fetch(`/awesome/application/${userId}/delete`, {
+                        method: 'DELETE'
+                    });
+                    if (response.status === 200) {
+                        // Refresh the list after successful deletion
+                        getUserInfoButton.click();
+                    }
+                } catch (error) {
+                    console.error('Error deleting application:', error);
+                }
+            }
+
+            // Event handler for create new user button
+            createNewUserButton.addEventListener('click', () => {
+                window.location.href = '/create-user.html';
+            });
+        </script>
+    </body>
+</html>
+
